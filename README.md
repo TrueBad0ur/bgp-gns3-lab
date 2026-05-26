@@ -69,18 +69,23 @@
 | R6 — R7 | 10.3.67.0/30 | .1     | .2      |
 
 ### Loopbacks (announced prefixes)
-| Router | AS    | Loopback       |
-|--------|-------|----------------|
-| R1     | 65001 | 192.168.1.1/24 |
-| R2     | 65002 | 192.168.2.1/24 |
-| R3     | 65003 | 192.168.3.1/24 |
-| R4     | 65010 | 172.16.4.1/24  |
-| R5     | 65011 | 172.16.5.1/24  |
-| R6     | 65012 | 172.16.6.1/24  |
-| R7     | 65013 | 172.16.7.1/24  |
-| R8     | 65100 | 10.10.8.1/24   |
-| R9     | 65101 | 10.10.9.1/24   |
-| R10    | 65102 | 10.10.11.1/24  |
+| Router | AS    | Loopback        |
+|--------|-------|-----------------|
+| R1     | 65001 | 192.168.1.1/24  |
+| R2     | 65002 | 192.168.2.1/24  |
+| R3     | 65003 | 192.168.3.1/24  |
+| R4     | 65010 | 172.16.4.1/24   |
+| R5     | 65011 | 172.16.5.1/24   |
+| R6     | 65012 | 172.16.6.1/24   |
+| R7     | 65013 | 172.16.7.1/24   |
+| R8     | 65100 | 10.10.8.1**/32** |
+| R9     | 65101 | 10.10.9.1/24    |
+| R10    | 65102 | 10.10.11.1**/32** |
+
+> **Note:** R8 and R10 use /32 on loopback because their client subnet
+> (10.10.8.0/24 and 10.10.11.0/24) is also assigned to ether2 for DHCP.
+> Using /24 on loopback causes MikroTik to source replies from the loopback
+> address instead of ether2, breaking connectivity to client machines.
 
 ---
 
@@ -231,7 +236,7 @@
 /ip address add address=10.2.48.2/30 interface=ether1
 /ip address add address=10.10.8.254/24 interface=ether2
 /interface bridge add name=lo
-/ip address add address=10.10.8.1/24 interface=lo
+/ip address add address=10.10.8.1/32 interface=lo
 /routing bgp instance set default as=65100
 /routing bgp peer add name=r4 remote-address=10.2.48.1 remote-as=65010
 /routing bgp network add network=10.10.8.0/24
@@ -263,7 +268,7 @@
 /ip address add address=10.2.70.2/30 interface=ether1
 /ip address add address=10.10.11.254/24 interface=ether2
 /interface bridge add name=lo
-/ip address add address=10.10.11.1/24 interface=lo
+/ip address add address=10.10.11.1/32 interface=lo
 /routing bgp instance set default as=65102
 /routing bgp peer add name=r7 remote-address=10.2.70.1 remote-as=65013
 /routing bgp network add network=10.10.11.0/24
@@ -421,4 +426,27 @@ PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
 --- 8.8.8.8 ping statistics ---
 4 packets transmitted, 4 received, 0% packet loss, time 3006ms
 rtt min/avg/max/mdev = 16.339/16.937/18.164/0.722 ms
+```
+
+### Ping between machines — machine2 to machine1
+
+```
+root@debian:/home/debian# ping 10.10.8.200
+PING 10.10.8.200 (10.10.8.200) 56(84) bytes of data.
+64 bytes from 10.10.8.200: icmp_seq=1 ttl=60 time=3.98 ms
+64 bytes from 10.10.8.200: icmp_seq=2 ttl=60 time=3.11 ms
+--- 10.10.8.200 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss
+```
+
+### Ping internet from machine2 (Debian)
+
+```
+root@debian:/home/debian# ping -c 2 8.8.8.8
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=103 time=17.6 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=103 time=16.5 ms
+--- 8.8.8.8 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss
+rtt min/avg/max/mdev = 16.500/17.050/17.601/0.550 ms
 ```
